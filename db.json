@@ -1,0 +1,48 @@
+{
+  "invoices": [
+    {
+      "id": 1,
+      "invoice_number": "001-001-000000001",
+      "provider": "Proveedor Ejemplo S.A.",
+      "ruc": "1790001234001",
+      "emission_date": "2023-10-15",
+      "total_value": 1250.75,
+      "status": "pending",
+      "cp_doc_number": "FC-2023-0001",
+      "cp_emission_date": "2023-10-15",
+      "retention_doc_number": "001002-001-000000123",
+      "retention_emission_date": "2023-10-16",
+      "retention_rent_base": 950.00,
+      "retention_iva_base": 114.00,
+      "contract_validated": false,
+      "budget_validated": false,
+      "invoice_name_validated": false,
+      "purchase_type": "",
+      "retention_validated": false,
+      "retention_number_validated": false,
+      "additional_observations": ""
+    },
+    {
+      "id": 2,
+      "invoice_number": "001-001-000000002", 
+      "provider": "Otro Proveedor Cía. Ltda.",
+      "ruc": "1790005678001",
+      "emission_date": "2023-10-16",
+      "total_value": 3200.00,
+      "status": "approved",
+      "cp_doc_number": "FC-2023-0002",
+      "cp_emission_date": "2023-10-16",
+      "retention_doc_number": "001002-001-000000124",
+      "retention_emission_date": "2023-10-17",
+      "retention_rent_base": 2750.00,
+      "retention_iva_base": 412.50,
+      "contract_validated": true,
+      "budget_validated": true,
+      "invoice_name_validated": true,
+      "purchase_type": "goods",
+      "retention_validated": true,
+      "retention_number_validated": true,
+      "additional_observations": "Factura aprobada correctamente"
+    }
+  ]
+}

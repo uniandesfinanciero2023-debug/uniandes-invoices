@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Revisión de Facturas - UNIANDES</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --uniandes-primary: #1B396A;
+            --uniandes-secondary: #E63946;
+            --uniandes-accent: #F1FAEE;
+            --uniandes-light: #A8DADC;
+            --uniandes-dark: #457B9D;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .navbar {
+            background-color: var(--uniandes-primary);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--uniandes-primary);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--uniandes-primary);
+            border-color: var(--uniandes-primary);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--uniandes-dark);
+            border-color: var(--uniandes-dark);
+        }
+        
+        .btn-danger {
+            background-color: var(--uniandes-secondary);
+            border-color: var(--uniandes-secondary);
+        }
+        
+        .table th {
+            background-color: var(--uniandes-light);
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .section-title {
+            border-left: 4px solid var(--uniandes-primary);
+            padding-left: 10px;
+            margin: 20px 0 15px;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--uniandes-primary);
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--uniandes-secondary);
+        }
+        
+        .checklist-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        #reviewFormCard {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <div class="logo-container">
+                <div class="logo">U</div>
+                <a class="navbar-brand" href="#">UNIANDES - Cuentas por Pagar</a>
+            </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#"><i class="fas fa-home me-1"></i> Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-file-invoice me-1"></i> Facturas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-chart-bar me-1"></i> Reportes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-cog me-1"></i> Configuración</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-user me-1"></i> Mi Cuenta</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Alertas -->
+        <div id="alertContainer"></div>
+
+        <!-- Formulario de búsqueda -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-search me-2"></i>Buscar Factura
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="invoiceNumber" class="form-label">Número de Factura</label>
+                        <input type="text" class="form-control" id="invoiceNumber" placeholder="Ingrese número de factura">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="providerRuc" class="form-label">RUC del Proveedor</label>
+                        <input type="text" class="form-control" id="providerRuc" placeholder="Ingrese RUC del proveedor">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="statusFilter" class="form-label">Estado</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">Todos</option>
+                            <option value="pending">Pendiente de revisión</option>
+                            <option value="approved">Aprobado</option>
+                            <option value="rejected">Rechazado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-primary me-2" id="searchButton">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    <button class="btn btn-outline-secondary" id="clearButton">
+                        <i class="fas fa-eraser me-1"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados de búsqueda -->
+        <div class="card mb-4" id="resultsCard">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Resultados de Búsqueda</span>
+                <span class="badge bg-primary" id="resultsCount">2 facturas encontradas</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>N° Factura</th>
+                                <th>Proveedor</th>
+                                <th>RUC</th>
+                                <th>Fecha Emisión</th>
+                                <th>Valor Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>001-001-000000001</td>
+                                <td>Proveedor Ejemplo S.A.</td>
+                                <td>1790001234001</td>
+                                <td>2023-10-15</td>
+                                <td>$1,250.75</td>
+                                <td><span class="status-badge status-pending">Pendiente</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary review-btn" data-id="1">
+                                        <i class="fas fa-edit"></i> Revisar
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>001-001-000000002</td>
+                                <td>Otro Proveedor Cía. Ltda.</td>
+                                <td>1790005678001</td>
+                                <td>2023-10-16</td>
+                                <td>$3,200.00</td>
+                                <td><span class="status-badge status-approved">Aprobado</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary review-btn" data-id="2">
+                                        <i class="fas fa-edit"></i> Revisar
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de revisión (se muestra cuando se selecciona una factura) -->
+        <div class="card mb-4" id="reviewFormCard">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-file-invoice me-2"></i>Revisión de Factura: <span id="currentInvoiceNumber">001-001-000000001</span></span>
+                <span class="status-badge status-pending" id="currentInvoiceStatus">Pendiente</span>
+            </div>
+            <div class="card-body">
+                <h4 class="section-title">1. Tabla Comparativa Principal</h4>
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th>CP Comprobante T.</th>
+                                <th>Factura Proveedor</th>
+                                <th>Retención</th>
+                                <th>Visto (✓) / X (NO COINCIDE)</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Documento</strong></td>
+                                <td>FC-2023-0001</td>
+                                <td>001-001-000000001</td>
+                                <td>001002-001-000000123</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="docMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" id="docObservations" rows="2" placeholder="Observaciones..."></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fecha Emisión</strong></td>
+                                <td>2023-10-15</td>
+                                <td>2023-10-15</td>
+                                <td>2023-10-16</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="dateMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" id="dateObservations" rows="2" placeholder="Observaciones..."></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>RUC</strong></td>
+                                <td>1790001234001</td>
+                                <td>1790001234001</td>
+                                <td>1790001234001</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="rucMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" id="rucObservations" rows="2" placeholder="Observaciones..."></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Nombre</strong></td>
+                                <td>Proveedor Ejemplo S.A.</td>
+                                <td>Proveedor Ejemplo S.A.</td>
+                                <td>Proveedor Ejemplo S.A.</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="nameMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" id="nameObservations" rows="2" placeholder="Observaciones..."></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Valores</strong></td>
+                                <td>
+                                    CON IVA: $950.00<br>
+                                    CON IVA2: $0.00<br>
+                                    SIN IVA: $300.75
+                                </td>
+                                <td>
+                                    Subtotal: $950.00<br>
+                                    IVA 12%: $114.00<br>
+                                    IVA 15%: $0.00<br>
+                                    Total: $1,250.75
+                                </td>
+                                <td>
+                                    Base Imp. Renta: $950.00<br>
+                                    Base Imp. IVA: $114.00
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="valuesMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" id="valuesObservations" rows="2" placeholder="Observaciones..."></textarea>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 class="section-title">2. Verificación de Valores e Impuestos</h4>
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Retención</th>
+                                <th>CP Comprobante T.</th>
+                                <th>Factura Proveedor</th>
+                                <th>Coincide</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Base Imp. Renta: $950.00</td>
+                                <td>CON IVA/CON IVA2/SIN IVA: $1,250.75</td>
+                                <td>Subtotal: $950.00</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="rentBaseMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Base Imp. IVA: $114.00</td>
+                                <td>IVA/IVA2: $114.00</td>
+                                <td>IVA (12% o 15%): $114.00</td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="ivaBaseMatch">
+                                        <option value="pending">Pendiente</option>
+                                        <option value="yes" selected>✓ Coincide</option>
+                                        <option value="no">X No coincide</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 class="section-title">3. Verificación Adicional de Documentos</h4>
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Contrato y vigencia</label>
+                        <select class="form-select" id="contractValidation">
+                            <option value="pending">Pendiente de verificación</option>
+                            <option value="valid" selected>Contrato válido y vigente</option>
+                            <option value="invalid">Contrato inválido o no vigente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Certificación presupuestaria</label>
+                        <select class="form-select" id="budgetValidation">
+                            <option value="pending">Pendiente de verificación</option>
+                            <option value="valid" selected>Certificación válida</option>
+                            <option value="invalid">Certificación inválida</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Factura a nombre de UNIANDES</label>
+                        <select class="form-select" id="invoiceNameValidation">
+                            <option value="pending">Pendiente de verificación</option>
+                            <option value="valid" selected>Nombre y RUC correctos</option>
+                            <option value="invalid">Nombre o RUC incorrectos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Tipo de compra</label>
+                        <select class="form-select" id="purchaseType">
+                            <option value="">Seleccione el tipo</option>
+                            <option value="goods">Bienes</option>
+                            <option value="services" selected>Servicios</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Retenciones aplicadas</label>
+                        <select class="form-select" id="retentionValidation">
+                            <option value="pending">Pendiente de verificación</option>
+                            <option value="correct" selected>Retenciones aplicadas correctamente</option>
+                            <option value="incorrect">Retenciones aplicadas incorrectamente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">Número de retención (Sede/Extensión)</label>
+                        <select class="form-select" id="retentionNumberValidation">
+                            <option value="pending">Pendiente de verificación</option>
+                            <option value="correct" selected>Número corresponde a la sede correcta</option>
+                            <option value="incorrect">Número no corresponde a la sede correcta</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Observaciones adicionales</label>
+                        <textarea class="form-control" id="additionalObservations" rows="3" placeholder="Ingrese observaciones adicionales...">Todos los documentos están en orden. Proceder con el pago.</textarea>
+                    </div>
+                </div>
+
+                <h4 class="section-title">4. Porcentajes de Retención</h4>
+                <div class="alert alert-info mb-4">
+                    <ul class="mb-0">
+                        <li>Honorarios profesionales educativos: 10% (renta), sin IVA.</li>
+                        <li>Honorarios profesionales no educativos: 10% (renta) + 100% (IVA).</li>
+                        <li>Honorarios profesionales (sociedades): 3% (renta) + 100% (IVA).</li>
+                        <li>Bienes (régimen general): 1.75% (renta) + 100% (IVA).</li>
+                        <li>Servicios (régimen general): 2.75% (renta) + 100% (IVA).</li>
+                        <li>Proveedores RIMPE: 1% (renta) + 100% (IVA).</li>
+                        <li>Grandes contribuyentes: No se retiene renta, solo 100% de IVA.</li>
+                        <li>Régimen popular con factura electrónica: Sin retenciones.</li>
+                    </ul>
+                </div>
+
+                <h4 class="section-title">5. Checklist Final de Verificación</h4>
+                <div class="card mb-4">
+                    <div class="card-body p-0">
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check1" checked>
+                                <label class="form-check-label" for="check1">
+                                    Coincidencia de números de documento (FC/NV) entre CP, factura y retención.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check2" checked>
+                                <label class="form-check-label" for="check2">
+                                    Fechas, RUC y nombre del proveedor consistentes en todos los documentos.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check3" checked>
+                                <label class="form-check-label" for="check3">
+                                    Valores (subtotal, IVA, total) coinciden entre factura y CP.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check4" checked>
+                                <label class="form-check-label" for="check4">
+                                    Bases imponibles de retención coinciden con los valores sin IVA/con IVA del CP y el subtotal de la factura.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check5" checked>
+                                <label class="form-check-label" for="check5">
+                                    Retenciones aplicadas correctamente según el tipo de proveedor y servicio.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check6" checked>
+                                <label class="form-check-label" for="check6">
+                                    Retención del 100% de IVA aplicada (excepto en excepciones).
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check7" checked>
+                                <label class="form-check-label" for="check7">
+                                    Factura emitida a nombre de UNIANDES con RUC 1890149215001.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check8" checked>
+                                <label class="form-check-label" for="check8">
+                                    Contrato vigente y certificación presupuestaria en orden.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check9">
+                                <label class="form-check-label" for="check9">
+                                    Para hoteles: 10% de servicio y tasa hotelera registrados en SIN IVA y excluidos de retención de renta.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check10" checked>
+                                <label class="form-check-label" for="check10">
+                                    Número de retención corresponde a la sede/extensión correcta.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check11" checked>
+                                <label class="form-check-label" for="check11">
+                                    Total pagado = Total factura - Retenciones.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check12" checked>
+                                <label class="form-check-label" for="check12">
+                                    Cuentas contables correctas según el gasto.
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-danger" id="rejectButton">
+                        <i class="fas fa-times-circle me-1"></i> Rechazar
+                    </button>
+                    <button class="btn btn-success" id="approveButton">
+                        <i class="fas fa-check-circle me-1"></i> Aprobar
+                    </button>
+                    <button class="btn btn-secondary" id="saveButton">
+                        <i class="fas fa-save me-1"></i> Guardar Borrador
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>UNIVERSIDAD REGIONAL AUTÓNOMA DE LOS ANDES</h5>
+                    <p>RUC: 1890149215001</p>
+                    <p>Sistema de Gestión de Cuentas por Pagar</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>Versión 1.0.0</p>
+                    <p>© 2023 - Todos los derechos reservados</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Funcionalidad JavaScript para el sistema
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos DOM
+            const alertContainer = document.getElementById('alertContainer');
+            const reviewFormCard = document.getElementById('reviewFormCard');
+            const approveButton = document.getElementById('approveButton');
+            const rejectButton = document.getElementById('rejectButton');
+            const saveButton = document.getElementById('saveButton');
+            
+            // Mostrar alerta de bienvenida
+            function showAlert(message, type = 'info') {
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                alertContainer.appendChild(alert);
+                
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.classList.remove('show');
+                        setTimeout(() => alert.remove(), 500);
+                    }
+                }, 5000);
+            }
+            
+            // Configurar event listeners para los botones de revisar
+            document.querySelectorAll('.review-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const invoiceId = this.getAttribute('data-id');
+                    reviewFormCard.style.display = 'block';
+                    reviewFormCard.scrollIntoView({ behavior: 'smooth' });
+                    showAlert('Formulario de revisión cargado correctamente.', 'success');
+                });
+            });
+            
+            // Configurar botones de acción
+            approveButton.addEventListener('click', function() {
+                showAlert('Factura aprobada exitosamente.', 'success');
+                document.getElementById('currentInvoiceStatus').textContent = 'Aprobado';
+                document.getElementById('currentInvoiceStatus').className = 'status-badge status-approved';
+            });
+            
+            rejectButton.addEventListener('click', function() {
+                const observations = document.getElementById('additionalObservations').value;
+                if (!observations) {
+                    showAlert('Por favor, ingrese observaciones para el rechazo.', 'warning');
+                    return;
+                }
+                showAlert('Factura rechazada.', 'danger');
+                document.getElementById('currentInvoiceStatus').textContent = 'Rechazado';
+                document.getElementById('currentInvoiceStatus').className = 'status-badge status-rejected';
+            });
+            
+            saveButton.addEventListener('click', function() {
+                showAlert('Progreso guardado correctamente.', 'info');
+            });
+            
+            // Mostrar mensaje de bienvenida
+            showAlert('Bienvenido al Sistema de Revisión de Cuentas por Pagar de UNIANDES. Use el formulario de búsqueda para comenzar.', 'info');
+        });
+    </script>
+</body>
+</html>
