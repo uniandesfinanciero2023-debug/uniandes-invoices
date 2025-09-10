@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Revisión de Facturas - UNIANDES</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK modular -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
+
+        // Your web app's Firebase configuration - TUS CREDENCIALES EXACTAS
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPSH8-ODIz1q5Mt4GdQ6MT81S_35kszFg",
+            authDomain: "uniandes-invoices.firebaseapp.com",
+            projectId: "uniandes-invoices",
+            storageBucket: "uniandes-invoices.firebasestorage.app",
+            messagingSenderId: "889918291633",
+            appId: "1:889918291633:web:44a4468456869869832c98",
+            measurementId: "G-MKN3S0844E"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+
+        // Hacer disponibles las funciones globalmente
+        window.firebaseStorage = storage;
+        window.firebaseRef = ref;
+        window.firebaseUploadBytes = uploadBytes;
+        window.firebaseGetDownloadURL = getDownloadURL;
+    </script>
+    <style>
+        :root {
+            --uniandes-primary: #1B396A;
+            --uniandes-secondary: #E63946;
+            --uniandes-accent: #F1FAEE;
+            --uniandes-light: #A8DADC;
+            --uniandes-dark: #457B9D;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .navbar {
+            background-color: var(--uniandes-primary);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--uniandes-primary);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--uniandes-primary);
+            border-color: var(--uniandes-primary);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--uniandes-dark);
+            border-color: var(--uniandes-dark);
+        }
+        
+        .btn-danger {
+            background-color: var(--uniandes-secondary);
+            border-color: var(--uniandes-secondary);
+        }
+        
+        .table th {
+            background-color: var(--uniandes-light);
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .section-title {
+            border-left: 4px solid var(--uniandes-primary);
+            padding-left: 10px;
+            margin: 20px 0 15px;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--uniandes-primary);
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--uniandes-secondary);
+        }
+        
+        .checklist-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--uniandes-primary);
+            background-color: #e8f4f8;
+        }
+        
+        .pdf-preview {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            flex-direction: column;
+        }
+        
+        #reviewFormCard {
+            display: none;
+        }
+        
+        .upload-progress {
+            height: 5px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--uniandes-primary);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <div class="logo-container">
+                <div class="logo">U</div>
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-university me-2"></i>
+                    UNIANDES - Cuentas por Pagar
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Alertas -->
+        <div id="alertContainer"></div>
+
+        <!-- Sección de Carga de Documentos -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-upload me-2"></i>Cargar Documentos para Revisión
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label required-field">Comprobante de Transacción (CP)</label>
+                        <div class="upload-area" onclick="document.getElementById('cpFile').click()">
+                            <i class="fas fa-file-pdf fa-3x mb-2 text-danger"></i>
+                            <p>Haz clic para subir CP</p>
+                            <input type="file" id="cpFile" accept=".pdf" style="display: none;" onchange="handleFileUpload(this, 'cpPreview')">
+                        </div>
+                        <div class="pdf-preview mt-2" id="cpPreview">
+                            <i class="fas fa-file-pdf fa-2x text-muted"></i>
+                            <span>Vista previa CP</span>
+                        </div>
+                        <div class="upload-progress" id="cpProgress" style="display: none;">
+                            <div class="progress-bar" id="cpProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label required-field">Factura del Proveedor</label>
+                        <div class="upload-area" onclick="document.getElementById('invoiceFile').click()">
+                            <i class="fas fa-file-invoice fa-3x mb-2 text-primary"></i>
+                            <p>Haz clic para subir Factura</p>
+                            <input type="file" id="invoiceFile" accept=".pdf" style="display: none;" onchange="handleFileUpload(this, 'invoicePreview')">
+                        </div>
+                        <div class="pdf-preview mt-2" id="invoicePreview">
+                            <i class="fas fa-file-invoice fa-2x text-muted"></i>
+                            <span>Vista previa Factura</span>
+                        </div>
+                        <div class="upload-progress" id="invoiceProgress" style="display: none;">
+                            <div class="progress-bar" id="invoiceProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label required-field">Retención</label>
+                        <div class="upload-area" onclick="document.getElementById('retentionFile').click()">
+                            <i class="fas fa-receipt fa-3x mb-2 text-success"></i>
+                            <p>Haz clic para subir Retención</p>
+                            <input type="file" id="retentionFile" accept=".pdf" style="display: none;" onchange="handleFileUpload(this, 'retentionPreview')">
+                        </div>
+                        <div class="pdf-preview mt-2" id="retentionPreview">
+                            <i class="fas fa-receipt fa-2x text-muted"></i>
+                            <span>Vista previa Retención</span>
+                        </div>
+                        <div class="upload-progress" id="retentionProgress" style="display: none;">
+                            <div class="progress-bar" id="retentionProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button class="btn btn-primary btn-lg" onclick="uploadDocuments()" id="processBtn">
+                            <i class="fas fa-check-circle me-1"></i> Iniciar Revisión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de revisión -->
+        <div class="card mb-4" id="reviewFormCard">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-file-invoice me-2"></i>Revisión de Factura</span>
+                <span class="status-badge status-pending" id="currentInvoiceStatus">Pendiente</span>
+            </div>
+            <div class="card-body">
+                <!-- [TODO EL CONTENIDO DEL FORMULARIO DE REVISIÓN AQUÍ] -->
+                <h4 class="section-title">Revisión de Documentos</h4>
+                <p>Los documentos se han subido correctamente. Ahora puedes proceder con la revisión detallada.</p>
+                
+                <div class="alert alert-info">
+                    <strong>Documentos subidos:</strong>
+                    <div id="uploadedFilesList"></div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-danger" id="rejectButton">
+                        <i class="fas fa-times-circle me-1"></i> Rechazar
+                    </button>
+                    <button class="btn btn-success" id="approveButton">
+                        <i class="fas fa-check-circle me-1"></i> Aprobar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>UNIVERSIDAD REGIONAL AUTÓNOMA DE LOS ANDES</h5>
+                    <p>RUC: 1890149215001</p>
+                    <p>Sistema de Gestión de Cuentas por Pagar v3.0</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>Con tecnología Firebase</p>
+                    <p>© 2023 - Todos los derechos reservados</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let uploadedFiles = {
+            cp: null,
+            invoice: null,
+            retention: null
+        };
+
+        // Función para manejar la subida de archivos
+        function handleFileUpload(input, previewId) {
+            const file = input.files[0];
+            if (file && file.type === 'application/pdf') {
+                const preview = document.getElementById(previewId);
+                preview.innerHTML = `
+                    <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                    <p>${file.name}</p>
+                    <small>${(file.size / 1024).toFixed(2)} KB</small>
+                `;
+                
+                // Guardar referencia al archivo
+                const fileType = previewId.replace('Preview', '');
+                uploadedFiles[fileType] = file;
+            }
+        }
+
+        // Función para subir documentos a Firebase
+        async function uploadDocuments() {
+            const cpFile = uploadedFiles.cp;
+            const invoiceFile = uploadedFiles.invoice;
+            const retentionFile = uploadedFiles.retention;
+            
+            if (!cpFile || !invoiceFile || !retentionFile) {
+                showAlert('Por favor, suba todos los documentos requeridos.', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('processBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo documentos...';
+            
+            try {
+                showAlert('Subiendo documentos a Firebase...', 'info');
+                
+                // Subir archivos a Firebase
+                const uploadPromises = [
+                    uploadFile(cpFile, 'cp'),
+                    uploadFile(invoiceFile, 'invoice'),
+                    uploadFile(retentionFile, 'retention')
+                ];
+                
+                await Promise.all(uploadPromises);
+                
+                showAlert('¡Documentos subidos correctamente! Ahora puede proceder con la revisión.', 'success');
+                document.getElementById('reviewFormCard').style.display = 'block';
+                
+                // Mostrar lista de archivos subidos
+                document.getElementById('uploadedFilesList').innerHTML = `
+                    <div>• CP: ${cpFile.name}</div>
+                    <div>• Factura: ${invoiceFile.name}</div>
+                    <div>• Retención: ${retentionFile.name}</div>
+                `;
+                
+            } catch (error) {
+                console.error('Error uploading files:', error);
+                showAlert('Error al subir documentos: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Iniciar Revisión';
+            }
+        }
+
+        // Función para subir un archivo individual
+        async function uploadFile(file, fileType) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Mostrar progreso
+                    const progressBar = document.getElementById(`${fileType}ProgressBar`);
+                    const progressContainer = document.getElementById(`${fileType}Progress`);
+                    progressContainer.style.display = 'block';
+                    
+                    // Crear referencia única para el archivo
+                    const timestamp = new Date().getTime();
+                    const fileName = `${fileType}_${timestamp}_${file.name}`;
+                    const storageRef = window.firebaseRef(window.firebaseStorage, `documents/${fileName}`);
+                    
+                    // Subir el archivo
+                    const uploadTask = window.firebaseUploadBytes(storageRef, file);
+                    
+                    uploadTask.then((snapshot) => {
+                        progressBar.style.width = '100%';
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                        }, 1000);
+                        resolve(snapshot);
+                    }).catch(reject);
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // Función para mostrar alertas
+        function showAlert(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('alertContainer').appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 500);
+                }
+            }, 5000);
+        }
+
+        // Configurar event listeners para los botones
+        document.getElementById('approveButton').addEventListener('click', function() {
+            showAlert('Factura aprobada exitosamente.', 'success');
+            document.getElementById('currentInvoiceStatus').textContent = 'Aprobado';
+            document.getElementById('currentInvoiceStatus').className = 'status-badge status-approved';
+        });
+
+        document.getElementById('rejectButton').addEventListener('click', function() {
+            showAlert('Factura rechazada.', 'danger');
+            document.getElementById('currentInvoiceStatus').textContent = 'Rechazado';
+            document.getElementById('currentInvoiceStatus').className = 'status-badge status-rejected';
+        });
+
+        // Mostrar mensaje de bienvenida
+        document.addEventListener('DOMContentLoaded', function() {
+            showAlert('Bienvenido al Sistema de Revisión de Cuentas por Pagar de UNIANDES. Suba los documentos PDF para comenzar.', 'info');
+        });
+    </script>
+</body>
+</html>
